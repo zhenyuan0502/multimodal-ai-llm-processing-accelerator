@@ -23,6 +23,7 @@ from helpers import (
     resize_img_by_max,
 )
 from PIL import Image
+import download_file
 
 logging.basicConfig(
     level=logging.INFO,
@@ -135,58 +136,12 @@ with open(backend_cu_schema_path, "r") as json_file:
             BACKEND_CU_SCHEMA_TUPLES_BY_MODALITY[modality].append(
                 (schema["name"], analyzer_id)
             )
-
-
-### Load (and download) all required demo files.
-def download_url_source_to_local(
-    url_source: str, output_folder: str, save_name: str = None
-) -> str:
-    """
-    Downloads a file from a URL source to a local path, returning the local
-    path of the downloaded file.
-    """
-    # Download file to local path
-    basename = os.path.basename(url_source).split("?")[0]
-    if save_name:
-        # Clean the save_name automatically
-        accepted_chars = (
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_ "
-        )
-        save_name = save_name.replace(" ", "_").replace("-", "_").lower()
-        save_name = "".join([c for c in save_name if c in accepted_chars])
-        ext = os.path.splitext(basename)[1]
-        basename = f"{save_name}{ext}"
-    local_path = os.path.join(output_folder, basename)
-    if not os.path.exists(local_path):
-        os.makedirs(output_folder, exist_ok=True)
-        logging.info(f"Downloading {url_source} to {local_path}")
-        response = requests.get(url_source)
-        response.raise_for_status()
-        with open(local_path, "wb") as f:
-            f.write(response.content)
-    # Return local path
-    return local_path
-
-
-with open("demo_files/doc_intel_processing_samples.json", "r") as json_file:
-    doc_intel_url_sources: dict[str, str] = json.load(json_file)
-
-with open(
-    "demo_files/content_understanding/video_file_web_links.json", "r"
-) as json_file:
-    cu_video_file_url_sources: dict[str, str] = json.load(json_file)
+            
+DEMO_DOC_INTEL_PROCESSING_FILE_TUPLES, VIDEO_FILE_TUPLES = download_file.download()
 
 # For dropdown components, create a list of tuples of (display_name, filepath).
 # For standard file inputs, create a list of file paths.
-DEMO_DOC_INTEL_PROCESSING_FILE_TUPLES = [
-    (
-        name,
-        download_url_source_to_local(
-            url_source, "demo_files/temp/doc_intel_processing", name
-        ),
-    )
-    for name, url_source in doc_intel_url_sources.items()
-]
+
 DEMO_CALL_CENTER_AUDIO_FILES = [
     os.path.join("demo_files/call_center_audio", fn)
     for fn in os.listdir("demo_files/call_center_audio")
@@ -212,13 +167,8 @@ DEMO_CONTENT_UNDERSTANDING_VIDEO_TUPLES = [
     )
     for fn in os.listdir("demo_files/content_understanding")
     if fn.endswith((".mp4"))
-] + [
-    (
-        name,
-        download_url_source_to_local(url_source, "demo_files/temp/video_files", name),
-    )
-    for name, url_source in cu_video_file_url_sources.items()
-]
+] + VIDEO_FILE_TUPLES
+
 DEMO_CONTENT_UNDERSTANDING_AUDIO_TUPLES = [
     (
         os.path.splitext(os.path.basename(fn))[0],
@@ -249,7 +199,7 @@ DEMO_ACCOUNT_OPENING_FORM_FILES = [
     if fn.endswith((".pdf"))
 ]
 DEMO_VISION_FILES = DEMO_PDF_FILES + DEMO_IMG_FILES
-with open("demo_files/text_samples.json", "r") as json_file:
+with open("demo_files/text_samples.json", "r", encoding="utf-8") as json_file:
     text_samples_dict: dict[str, str] = json.load(json_file)
     TEXT_SAMPLES_TUPLES = [(label, text) for label, text in text_samples_dict.items()]
 

@@ -4,6 +4,25 @@ param functionAppName string = 'ai-llm-processing-func'
 @description('Whether to use a premium or consumption SKU for the function\'s app service plan. Premium plans are recommended for production workloads, especially non-HTTP-triggered functions.')
 param functionAppUsePremiumSku bool = false
 
+@description('The properties for the premium SKU of the function app service plan.')
+param functionAppPlanPremiumSkuProperties object = {
+  name: 'P0v3'
+  tier: 'Premium0V3'
+  size: 'P0v3'
+  family: 'Pv3'
+  capacity: 1
+}
+
+@description('The properties for the standard SKU of the function app service plan.')
+param functionAppPlanStandardSkuProperties object = {
+  name: 'Y1'
+  tier: 'Dynamic'
+  size: 'Y1'
+  family: 'Y'
+  capacity: 0
+}
+
+
 @description('The name of the Web App. This will become part of the URL (e.g. https://{webAppName}.azurewebsites.net) and must be unique across Azure.')
 param webAppName string = 'ai-llm-processing-demo'
 
@@ -12,6 +31,14 @@ param appendUniqueUrlSuffix bool = true
 
 @description('Whether to deploy the Web App. If web app deployment is not required, set deployWebApp to false and remove the webapp service deployment from the azure.yaml file')
 param deployWebApp bool = true
+
+param webAppPlanSkuProperties object = {
+  name: 'P0v3'
+  tier: 'Premium0V3'
+  size: 'P0v3'
+  family: 'Pv3'
+  capacity: 1
+}
 
 @description('Whether to require a username and password when accessing the Web App')
 param webAppUsePasswordAuth bool = true
@@ -49,6 +76,9 @@ param deployContentUnderstandingMultiServicesResource bool = true
 
 @description('The location of the Azure AI services resource to be used for Azure AI Content Understanding (this will be a multi-service resource). This should be in a location supported by the service (see https://learn.microsoft.com/en-us/azure/ai-services/content-understanding/language-region-support?tabs=document#region-support)')
 param contentUnderstandingLocation string = 'westus'
+
+@description('Schema whether to be deployed')
+param isContentUnderstandingSchemaDeployment bool = true
 
 @description('Whether to deploy the Document Intelligence resource (a single-service AI resource)')
 param deployDocIntelResource bool = true
@@ -179,20 +209,8 @@ param storageServicesAndKVAllowedExternalIpsOrIpRanges array = []
 
 // Set function app settings based on the deployment type. 
 var functionAppSkuProperties = functionAppUsePremiumSku
-  ? {
-      name: 'P0v3'
-      tier: 'Premium0V3'
-      size: 'P0v3'
-      family: 'Pv3'
-      capacity: 1
-    }
-  : {
-      name: 'Y1'
-      tier: 'Dynamic'
-      size: 'Y1'
-      family: 'Y'
-      capacity: 0
-    }
+  ? functionAppPlanPremiumSkuProperties : functionAppPlanStandardSkuProperties
+
 // The current version of this repo requires key-based storage account access to load the function app package.
 // In a future version, containers will be used, enabling full identity-based access to the storage account.
 var functionAppConsumptionSettings = ((!functionAppUsePremiumSku)
@@ -636,6 +654,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+var storageAccountBlobUri = 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
+var storageAccountQueueUri = 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
+var storageAccountTableUri = 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
+
 // Optional blob container for storing files
 resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
   parent: storageAccount
@@ -966,6 +988,7 @@ resource cosmosDbPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtu
 
 resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = if (deployCosmosDB) {
   parent: cosmosDbAccount
+  location: location
   name: cosmosDbDatabaseName
   properties: {
     resource: {
@@ -1736,9 +1759,9 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       SCM_DO_BUILD_DURING_DEPLOYMENT: '1'
       AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
       AzureWebJobsStorage__credential: 'managedIdentity'
-      AzureWebJobsStorage__serviceUri: 'https://${storageAccount.name}.blob.${environment().suffixes.storage}'
-      AzureWebJobsStorage__queueServiceUri: 'https://${storageAccount.name}.queue.${environment().suffixes.storage}'
-      AzureWebJobsStorage__tableServiceUri: 'https://${storageAccount.name}.table.${environment().suffixes.storage}'
+      AzureWebJobsStorage__serviceUri: storageAccountBlobUri
+      AzureWebJobsStorage__queueServiceUri: storageAccountQueueUri
+      AzureWebJobsStorage__tableServiceUri: storageAccountTableUri
       WEBSITE_CONTENTSHARE: functionContentShareName
       WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccountConnectionString
       WEBSITE_CONTENTOVERVNET: '1'
@@ -1845,13 +1868,7 @@ resource webAppPlan 'Microsoft.Web/serverfarms@2024-04-01' = if (deployWebApp) {
   properties: {
     reserved: true
   }
-  sku: {
-    name: 'P0v3'
-    tier: 'Premium0V3'
-    size: 'P0v3'
-    family: 'Pv3'
-    capacity: 1
-  }
+  sku: webAppPlanSkuProperties
   kind: 'linux'
   dependsOn: [functionAppPlan] // Consumption plan must be deployed before premium plan
 }
@@ -2046,7 +2063,11 @@ module additionalIdentityCosmosDbRoleAssignment 'cosmosdb-account-role-assignmen
 // Add Language endpoint to outputs
 output FunctionAppUrl string = functionApp.properties.defaultHostName
 output webAppUrl string = deployWebApp ? webApp.properties.defaultHostName : ''
-output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+output storageAccountEndpolint string = storageAccount.properties.primaryEndpoints.blob
+output storageAccountName string = storageAccount.name
+output storageAccountBlobUri string = storageAccountBlobUri
+output storageAccountQueueUri string = storageAccountQueueUri
+output storageAccountTableUri string = storageAccountTableUri
 output cosmosDbAccountEndpoint string = deployCosmosDB ? cosmosDbAccount.properties.documentEndpoint : ''
 output cosmosDbAccountName string = deployCosmosDB ? cosmosDbAccount.name : ''
 output cosmosDbDatabaseName string = deployCosmosDB ? cosmosDbDatabaseName : ''
@@ -2058,6 +2079,8 @@ output AOAI_WHISPER_DEPLOYMENT string = (deployOpenAIResource && deployOpenAIWhi
 output CONTENT_UNDERSTANDING_ENDPOINT string = deployContentUnderstandingMultiServicesResource
   ? 'https://${contentUnderstandingTokenName}.services.ai.azure.com/'
   : ''
+
+output IS_DEPLOY_SCHEMA_CONTENT_UNDERSTANDING bool = isContentUnderstandingSchemaDeployment
 output DOC_INTEL_ENDPOINT string = deployDocIntelResource ? docIntel.properties.endpoint : ''
 output SPEECH_ENDPOINT string = deploySpeechResource ? speech.properties.endpoint : ''
 output LANGUAGE_ENDPOINT string = deployLanguageResource

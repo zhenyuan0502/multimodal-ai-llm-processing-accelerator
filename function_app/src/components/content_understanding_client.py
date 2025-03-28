@@ -61,6 +61,11 @@ class AzureContentUnderstandingClient:
         Returns:
             dict: A dictionary containing the headers for the HTTP requests.
         """
+        
+        self._logger.info(f'AD Token Provider: {self._azure_ad_token_provider()}')
+        self._logger.info(f'Subscription Key: {self._subscription_key}')
+        self._logger.info(f'API Token: {self._api_token}')
+        
         headers = (
             {"Authorization": f"Bearer {self._azure_ad_token_provider()}"}
             if self._azure_ad_token_provider
@@ -89,10 +94,18 @@ class AzureContentUnderstandingClient:
         Raises:
             requests.exceptions.HTTPError: If the HTTP request returned an unsuccessful status code.
         """
+        
+        headers = self._get_headers()
+        url = self._get_analyzer_list_url(self._endpoint, self._api_version)
+        
+        self._logger.info('Headers: %s', headers)
+        self._logger.info('URL: %s', url)
+        
         response = requests.get(
-            url=self._get_analyzer_list_url(self._endpoint, self._api_version),
-            headers=self._get_headers(),
+            url=url,
+            headers=headers,
         )
+        self._logger.info('Response: %s', response.json())
         response.raise_for_status()
         return response.json()
 
@@ -379,6 +392,7 @@ def create_analyzers(
     """
     # Get list of existing CU analyzers
     existing_cu_analyzer_ids = get_existing_analyzer_ids(cu_client)
+    
     created_analyzer_ids = list()
     for analyzer_id, schema in analyzer_id_to_schema_mapper:
         # Optionally delete the analyzer to force recreation of it (in case
