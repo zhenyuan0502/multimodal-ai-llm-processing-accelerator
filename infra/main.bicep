@@ -4,6 +4,25 @@ param functionAppName string = 'ai-llm-processing-func'
 @description('Whether to use a premium or consumption SKU for the function\'s app service plan. Premium plans are recommended for production workloads, especially non-HTTP-triggered functions.')
 param functionAppUsePremiumSku bool = false
 
+@description('The properties for the premium SKU of the function app service plan.')
+param functionAppPlanPremiumSkuProperties object = {
+  name: 'P0v3'
+  tier: 'Premium0V3'
+  size: 'P0v3'
+  family: 'Pv3'
+  capacity: 1
+}
+
+@description('The properties for the standard SKU of the function app service plan.')
+param functionAppPlanStandardSkuProperties object = {
+  name: 'Y1'
+  tier: 'Dynamic'
+  size: 'Y1'
+  family: 'Y'
+  capacity: 0
+}
+
+
 @description('The name of the Web App. This will become part of the URL (e.g. https://{webAppName}.azurewebsites.net) and must be unique across Azure.')
 param webAppName string = 'ai-llm-processing-demo'
 
@@ -12,6 +31,14 @@ param appendUniqueUrlSuffix bool = true
 
 @description('Whether to deploy the Web App. If web app deployment is not required, set deployWebApp to false and remove the webapp service deployment from the azure.yaml file')
 param deployWebApp bool = true
+
+param webAppPlanSkuProperties object = {
+  name: 'P0v3'
+  tier: 'Premium0V3'
+  size: 'P0v3'
+  family: 'Pv3'
+  capacity: 1
+}
 
 @description('Whether to require a username and password when accessing the Web App')
 param webAppUsePasswordAuth bool = true
@@ -179,20 +206,8 @@ param storageServicesAndKVAllowedExternalIpsOrIpRanges array = []
 
 // Set function app settings based on the deployment type. 
 var functionAppSkuProperties = functionAppUsePremiumSku
-  ? {
-      name: 'P0v3'
-      tier: 'Premium0V3'
-      size: 'P0v3'
-      family: 'Pv3'
-      capacity: 1
-    }
-  : {
-      name: 'Y1'
-      tier: 'Dynamic'
-      size: 'Y1'
-      family: 'Y'
-      capacity: 0
-    }
+  ? functionAppPlanPremiumSkuProperties : functionAppPlanStandardSkuProperties
+
 // The current version of this repo requires key-based storage account access to load the function app package.
 // In a future version, containers will be used, enabling full identity-based access to the storage account.
 var functionAppConsumptionSettings = ((!functionAppUsePremiumSku)
@@ -966,6 +981,7 @@ resource cosmosDbPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtu
 
 resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-11-15' = if (deployCosmosDB) {
   parent: cosmosDbAccount
+  location: location
   name: cosmosDbDatabaseName
   properties: {
     resource: {
@@ -1845,13 +1861,7 @@ resource webAppPlan 'Microsoft.Web/serverfarms@2024-04-01' = if (deployWebApp) {
   properties: {
     reserved: true
   }
-  sku: {
-    name: 'P0v3'
-    tier: 'Premium0V3'
-    size: 'P0v3'
-    family: 'Pv3'
-    capacity: 1
-  }
+  sku: webAppPlanSkuProperties
   kind: 'linux'
   dependsOn: [functionAppPlan] // Consumption plan must be deployed before premium plan
 }

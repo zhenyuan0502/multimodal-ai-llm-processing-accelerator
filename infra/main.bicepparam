@@ -6,13 +6,36 @@ param tags = {}
 param appendUniqueUrlSuffix = true
 
 // Function app
-param functionAppName = 'ai-llm-processing-func'
-param functionAppUsePremiumSku = true
+param functionAppName = 'ai-llm-processing-az-func'
+param functionAppUsePremiumSku = false
+param functionAppPlanPremiumSkuProperties = {
+      name: 'P0v3'
+      tier: 'Premium0V3'
+      size: 'P0v3'
+      family: 'Pv3'
+      capacity: 1
+  }
+
+param functionAppPlanStandardSkuProperties = {
+    name: 'B1'
+    tier: 'Basic'
+    size: 'B1'
+    family: 'B'
+    capacity: 1
+}
 
 // Web app
 // If web app deployment is not required, set deployWebApp to false and remove the webapp service deployment from the azure.yaml file
 param deployWebApp = true
-param webAppName = 'ai-llm-processing-demo'
+param webAppName = 'ai-llm-processing-az-demo'
+
+param webAppPlanSkuProperties = {
+    name: 'B1'
+    tier: 'Basic'
+    size: 'B1'
+    family: 'B'
+    capacity: 1
+}
 param webAppUsePasswordAuth = true
 param webAppUsername = 'admin'
 param webAppPassword = 'password'
@@ -26,7 +49,7 @@ param resourcePrefix = 'llm-proc'
 // Understanding analyzers using the postprovision hook.
 // To get your identity ID, run the following command in the Azure CLI:
 // > az ad signed-in-user show --query id -o tsv
-param additionalRoleAssignmentIdentityIds = []
+param additionalRoleAssignmentIdentityIds = ['5355afc9-0463-4d96-a347-3f56b6e035c2']
 
 // Storage service options
 param storageAccountName = 'llmprocstorage'
@@ -96,16 +119,16 @@ param openAIWhisperDeploymentSku = 'Standard'
 
 param webAppUsePrivateEndpoint = false
 param webAppAllowPublicAccess = true
-param webAppAllowedExternalIpRanges = [] // Use CIDR blocks for all entries
+param webAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24'] // Use CIDR blocks for all entries
 
 param functionAppNetworkingType = 'ServiceEndpoint'
 param functionAppAllowPublicAccess = true
-param functionAppAllowedExternalIpRanges = [] // Use CIDR blocks for all entries
+param functionAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24'] // Use CIDR blocks for all entries
 
 param backendServicesNetworkingType = 'ServiceEndpoint'
 param backendServicesAllowPublicAccess = true
-param backendServicesAllowedExternalIpsOrIpRanges = [] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
+param backendServicesAllowedExternalIpsOrIpRanges = ['116.110.42.0/24', '4.194.122.0/24'] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
 
 param storageServicesAndKVNetworkingType = 'ServiceEndpoint'
 param storageServicesAndKVAllowPublicAccess = true
-param storageServicesAndKVAllowedExternalIpsOrIpRanges = [] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
+param storageServicesAndKVAllowedExternalIpsOrIpRanges = ['116.110.42.0/24', '4.194.122.0/24'] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
