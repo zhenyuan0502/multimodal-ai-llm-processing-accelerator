@@ -249,7 +249,7 @@ DEMO_ACCOUNT_OPENING_FORM_FILES = [
     if fn.endswith((".pdf"))
 ]
 DEMO_VISION_FILES = DEMO_PDF_FILES + DEMO_IMG_FILES
-with open("demo_files/text_samples.json", "r") as json_file:
+with open("demo_files/text_samples.json", "r", encoding="utf-8") as json_file:
     text_samples_dict: dict[str, str] = json.load(json_file)
     TEXT_SAMPLES_TUPLES = [(label, text) for label, text in text_samples_dict.items()]
 

@@ -17,9 +17,9 @@ param functionAppPlanPremiumSkuProperties = {
   }
 
 param functionAppPlanStandardSkuProperties = {
-    name: 'B1'
+    name: 'B2'
     tier: 'Basic'
-    size: 'B1'
+    size: 'B2'
     family: 'B'
     capacity: 1
 }
@@ -30,9 +30,9 @@ param deployWebApp = true
 param webAppName = 'ai-llm-processing-az-demo'
 
 param webAppPlanSkuProperties = {
-    name: 'B1'
+    name: 'B2'
     tier: 'Basic'
-    size: 'B1'
+    size: 'B2'
     family: 'B'
     capacity: 1
 }
@@ -119,16 +119,16 @@ param openAIWhisperDeploymentSku = 'Standard'
 
 param webAppUsePrivateEndpoint = false
 param webAppAllowPublicAccess = true
-param webAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24'] // Use CIDR blocks for all entries
+param webAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24', '20.184.17.0/24'] // Use CIDR blocks for all entries
 
 param functionAppNetworkingType = 'ServiceEndpoint'
 param functionAppAllowPublicAccess = true
-param functionAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24'] // Use CIDR blocks for all entries
+param functionAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24', '20.184.17.0/24'] // Use CIDR blocks for all entries
 
 param backendServicesNetworkingType = 'ServiceEndpoint'
 param backendServicesAllowPublicAccess = true
-param backendServicesAllowedExternalIpsOrIpRanges = ['116.110.42.0/24', '4.194.122.0/24'] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
+param backendServicesAllowedExternalIpsOrIpRanges = ['116.110.42.0/24', '4.194.122.0/24', '20.184.17.0/24'] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
 
 param storageServicesAndKVNetworkingType = 'ServiceEndpoint'
 param storageServicesAndKVAllowPublicAccess = true
-param storageServicesAndKVAllowedExternalIpsOrIpRanges = ['116.110.42.0/24', '4.194.122.0/24'] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.
+param storageServicesAndKVAllowedExternalIpsOrIpRanges = ['116.110.42.0/24', '4.194.122.0/24', '20.184.17.0/24'] // Use CIDR blocks for IP ranges (up to /30), otherwise use specific IP addresses.

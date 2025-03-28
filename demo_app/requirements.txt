@@ -6,3 +6,4 @@ azure-identity==1.17.1
 azure-storage-blob>=12.19.1
 azure-cosmos>=4.7.0
 opencv-python-headless==4.10.0.84
+pydantic==2.10.6 # To fix error https://github.com/gradio-app/gradio/issues/10649
