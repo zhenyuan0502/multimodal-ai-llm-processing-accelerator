@@ -45,12 +45,12 @@ services:
         # and move the .env file since .webappignore (https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/service-packaging-ignore-files) does not seem to work.
         posix:
           shell: sh
-          run: cp ../function_app/config/content_understanding_schemas.json ./ && mv ./.env ../.demo_app.env.bak
+          run: python ../demo_app/download_file.py download && cp ../function_app/config/content_understanding_schemas.json ./ && mv ./.env ../.demo_app.env.bak
           interactive: false
           continueOnError: false
         windows:
           shell: pwsh
-          run: copy ../function_app/config/content_understanding_schemas.json ./ && mv ./.env ../.demo_app.env.bak
+          run: python ../demo_app/download_file.py download && copy ../function_app/config/content_understanding_schemas.json ./ && mv ./.env ../.demo_app.env.bak
           interactive: false
           continueOnError: false
       postpackage: 
