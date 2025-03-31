@@ -120,7 +120,9 @@ param openAIWhisperDeploymentSku = 'Standard'
 
 param webAppUsePrivateEndpoint = true
 param webAppAllowPublicAccess = true
-param webAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24', '20.184.17.0/24'] // Use CIDR blocks for all entries
+// param webAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24', '20.184.17.0/24'] // Use CIDR blocks for all entries
+param webAppAllowedExternalIpRanges = [] // Use CIDR blocks for all entries
+
 
 param functionAppNetworkingType = 'PrivateEndpoint'
 param functionAppAllowPublicAccess = true

@@ -15,7 +15,7 @@ hooks:
         if [ "$IS_DEPLOY_SCHEMA_CONTENT_UNDERSTANDING" = "true" ]; then
           # Check if the CONTENT_UNDERSTANDING_ENDPOINT variable is set and not null
           if [ -n "$CONTENT_UNDERSTANDING_ENDPOINT" ] && [ "$CONTENT_UNDERSTANDING_ENDPOINT" != "null" ]; then
-            python ./function_app/create_content_understanding_analyzers.py
+            python ./function_app/create_content_understanding_analyzers.py create_analyzer_schemas
           else
             echo "Skipping Content Understanding analyzer creation - the resource has not been deployed and/or no endpoint URL is available in the Bicep outputs"
           fi
@@ -30,7 +30,7 @@ hooks:
       run: |
         if ($env:IS_DEPLOY_SCHEMA_CONTENT_UNDERSTANDING -eq "true") {
           if ($env:CONTENT_UNDERSTANDING_ENDPOINT) {
-            python ./function_app/create_content_understanding_analyzers.py
+            python ./function_app/create_content_understanding_analyzers.py create_analyzer_schemas
           } else {
             Write-Host "Skipping Content Understanding analyzer creation - the resource has not been deployed and/or no endpoint URL is available in the Bicep outputs"
           }

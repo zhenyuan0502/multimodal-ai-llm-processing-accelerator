@@ -73,11 +73,13 @@ if IS_CONTENT_UNDERSTANDING_DEPLOYED:
     from bp_content_understanding_document import bp_content_understanding_document
     from bp_content_understanding_image import bp_content_understanding_image
     from bp_content_understanding_video import bp_content_understanding_video
+    from bp_create_content_understanding_schema import bp_create_content_understanding_schema
 
     app.register_blueprint(bp_content_understanding_document)
     app.register_blueprint(bp_content_understanding_video)
     app.register_blueprint(bp_content_understanding_audio)
     app.register_blueprint(bp_content_understanding_image)
+    app.register_blueprint(bp_create_content_understanding_schema)
 if IS_LANGUAGE_DEPLOYED:
     from bp_pii_redaction import bp_pii_redaction
 

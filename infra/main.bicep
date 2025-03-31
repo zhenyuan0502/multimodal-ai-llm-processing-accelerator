@@ -1700,7 +1700,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
     serverFarmId: functionAppPlan.id
     clientAffinityEnabled: true
     siteConfig: {
-      alwaysOn: functionAppUsePremiumSku ? true : false
+      alwaysOn: true
       pythonVersion: '3.11'
       linuxFxVersion: 'python|3.11'
       cors: {

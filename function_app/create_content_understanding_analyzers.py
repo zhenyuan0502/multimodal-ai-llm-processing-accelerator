@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import sys
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from src.components.content_understanding_client import (
@@ -68,7 +69,16 @@ def create_config_analyzer_schemas(force_recreation: bool = False):
     _cu_analyzer_ids = create_analyzers(
         cu_client, analyzer_to_schema_mapper, force_recreation=force_recreation
     )
+    
+    return _cu_analyzer_ids
 
 
 if __name__ == "__main__":
-    create_config_analyzer_schemas(FORCE_ANALYZER_RECREATION)
+    if len(sys.argv) > 1:
+        function_name = sys.argv[1]
+        if function_name == 'create_analyzer_schemas':
+            create_config_analyzer_schemas(FORCE_ANALYZER_RECREATION)
+        else:
+            print(f"Function '{function_name}' not found.")
+            
+    
