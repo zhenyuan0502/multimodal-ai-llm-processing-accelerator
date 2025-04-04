@@ -7,7 +7,7 @@ param appendUniqueUrlSuffix = true
 
 // Function app
 param functionAppName = 'ai-llm-processing-az-func'
-param functionAppUsePremiumSku = false
+param functionAppUsePremiumSku = true
 param functionAppPlanPremiumSkuProperties = {
       name: 'P0v3'
       tier: 'Premium0V3'
@@ -125,7 +125,7 @@ param webAppAllowedExternalIpRanges = [] // Use CIDR blocks for all entries
 
 
 param functionAppNetworkingType = 'PrivateEndpoint'
-param functionAppAllowPublicAccess = true
+param functionAppAllowPublicAccess = false
 param functionAppAllowedExternalIpRanges = ['116.110.42.0/24', '4.194.122.0/24', '20.184.17.0/24'] // Use CIDR blocks for all entries
 
 param backendServicesNetworkingType = 'PrivateEndpoint'
