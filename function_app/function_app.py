@@ -3,6 +3,10 @@ import os
 
 import azure.functions as func
 from dotenv import load_dotenv
+from src.helpers.azure_function import (
+    check_if_azurite_storage_emulator_is_running,
+    check_if_env_var_is_set,
+)
 
 load_dotenv()
 
@@ -36,7 +40,12 @@ IS_AOAI_DEPLOYED = check_if_env_var_is_set("AOAI_ENDPOINT")
 IS_DOC_INTEL_DEPLOYED = check_if_env_var_is_set("DOC_INTEL_ENDPOINT")
 IS_SPEECH_DEPLOYED = check_if_env_var_is_set("SPEECH_ENDPOINT")
 IS_LANGUAGE_DEPLOYED = check_if_env_var_is_set("LANGUAGE_ENDPOINT")
-IS_STORAGE_ACCOUNT_AVAILABLE = check_if_env_var_is_set("AzureWebJobsStorage") or all(
+IS_STORAGE_ACCOUNT_AVAILABLE = (
+    # If running the function app locally, check if the Azurite storage emulator is running
+    os.getenv("AzureWebJobsStorage") == "UseDevelopmentStorage=true"
+    and check_if_azurite_storage_emulator_is_running()
+) or all(
+    # If running on Azure, check if the storage account env vars were set correctly
     [
         check_if_env_var_is_set("AzureWebJobsStorage__accountName"),
         check_if_env_var_is_set("AzureWebJobsStorage__blobServiceUri"),
@@ -89,7 +98,7 @@ if IS_LANGUAGE_DEPLOYED:
 ### Define functions with input/output binding decorators (these do not work when defined in blueprint files).
 
 ## Blob storage -> CosmosDB Document Processing Pipeline
-# Only register the function if CosmosDB information is available
+# Only register the function if Azure Storage and CosmosDB information is available and can be connected to
 if (
     IS_STORAGE_ACCOUNT_AVAILABLE
     and IS_COSMOSDB_AVAILABLE

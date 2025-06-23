@@ -37,6 +37,8 @@ urlFragment: multimodal-ai-llm-processing-accelerator
     - [FAQ](#faq)
   - [Deployment](#deployment)
     - [Pricing Considerations](#pricing-considerations)
+    - [Networking Configuration](#networking-configuration)
+    - [Prerequisites for deployment and local development](#prerequisites-for-deployment-and-local-development)
     - [Deploying to Azure with azd](#deploying-to-azure-with-azd)
     - [Running the solution locally](#running-the-solution-locally)
   - [Credits](#credits)
@@ -102,7 +104,7 @@ The accelerator comes with these pre-built pipeline examples to help you get sta
 |**Azure Content Understanding Pipelines**<br>**(HTTP)**<br>Code: [Document](/function_app/bp_content_understanding_document.py), [Video](/function_app/bp_content_understanding_video.py), [Audio](/function_app/bp_content_understanding_audio.py), [Image](/function_app/bp_content_understanding_image.py)| Uses Azure Content Understanding Service to process Document, Video, Audio and Image modalities, along with some minor post-processing & enrichment.<br>- Azure Content Understanding (Input file -> structured outputs)<br>- Custom post-processing<br>- Return structured JSON |
 |**Form Field Extraction with Confidence Scores & bboxes**<br>**(HTTP)**<br>[Code](/function_app/bp_form_extraction_with_confidence.py)| Extracts key information from a PDF form and returns field-level and overall confidence scores and whether human review is required.<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Post-processing:<br><ul>- Match LLM field values with Document Intelligence extracted lines<br>- Merge Confidence scores and bounding boxes<br>- Determine whether to human review is required</ul>- Return structured JSON |
 |**Call Center Analysis with Confidence Scores & Timestamps**<br>**(HTTP)**<br>[Code](/function_app/bp_call_center_audio_analysis.py)| Processes a call center recording, classifying customer sentiment & satisfaction, summarizing the call and next best action, and extracting any keywords mentioned. Returns the response with timestamps, confidence scores and the full sentence text for the next best action and each of the keywords mentioned.<br>- Azure AI Speech (Speech -> Text)<br>- GPT-4o (text input)<br>- Post-processing:<br><ul>- Match LLM timestamps to transcribed phrases<br>- Merge sentence info & confidence scores</ul>- Return structured JSON |
-|**Form Field Extraction**<br>**(Blob -> CosmosDB)**<br>Code: [Func](/function_app/function_app.py#L19.py), [Pipeline](/function_app/extract_blob_field_info_to_cosmosdb.py)| Summarizes text input into a desired style and number of output sentences.<br>- Pipeline triggered by blob storage event<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Write structured JSON result to CosmosDB container. |
+|**Form Field Extraction**<br>**(Blob -> CosmosDB)**<br>Code: [Function](/function_app/function_app.py#L88.py), [Pipeline](/function_app/extract_blob_field_info_to_cosmosdb.py)| Summarizes text input into a desired style and number of output sentences.<br>- Pipeline triggered by blob storage event<br>- PyMuPDF (PDF -> Image)<br>- Document Intelligence (PDF -> text)<br>- GPT-4o (text + image input)<br>- Write structured JSON result to CosmosDB container. |
 |**Summarize Text**<br>**(HTTP)**<br>[Code](/function_app/bp_summarize_text.py)| Summarizes text input into a desired style and number of output sentences.<br>- GPT-4o (text input + style/length instructions)<br>- Return raw text |
 |**PII Identification & Redaction**<br>**(HTTP)**<br>[Code](/function_app/bp_pii_redaction.py)| Identifies and redacts PII entities in text and documents.<br>- [Optional] Document Intelligence (PDF -> text)<br>- Azure AI Language (text -> PII entities)<br>- Return text or PDF with all PII entities redacted in-place. |
 |**Multimodal Document Intelligence Processing**<br>**(HTTP)**<br>[Code](/function_app/bp_multimodal_doc_intel_processing.py)| A pipeline showcasing the highly configurable Document Intelligence Processor that intelligently processes the raw Doc Intelligence API response to extract text, images and tables from a PDF/image into a more usable and flexible format.<br>- Document Intelligence (PDF/image -> text + images + tables)<br>- Return content as Markdown |
@@ -137,6 +139,15 @@ This accelerator is in active development, with a list of upcoming features incl
 To help prioritise these features or request new ones, please head to the Issues section of this repository.
 
 ### FAQ
+
+**I had an error during deployment or local development, how can I fix it?**
+
+Most of the errors occur when steps in the instructions have been skipped. In general, most errors can be avoided by making sure you **always** do the following:
+
+1. Always activate your virtual python environment before deploying or running the solution locally. This will prevent errors when running python scripts.
+1. Make sure you have configured the networking in a way that enables you to connect to all of the required Azure resources for both deployment and local development (e.g. making sure you have public access enabled and/or your IP address whitelisted). This will prevent firewall errors when you try to deploy the solution or conenct to cloud resources from your local development machine.
+1. Make sure you have correctly set the environment variables for both the function app (`function_app/local.settings.json`) and web app (`demo_app/.env`). Use the sample files in each directory as a starting point and follow the instructions in the local development sections to replace all placeholder values with their correct values.
+1. If using Azure Storage bindings, trigger or outputs in any pipelines, make sure that the Azurite Storage emulator is already running when you start the function and web app servers locally.
 
 **What is the difference between Azure Content Understanding and the custom pipeline approach?**
 
@@ -260,21 +271,30 @@ For more information, check out the configuration options within the `infra/main
 
 #### When to use each networking option
 
-**Service Endpoints**:
+**Service Endpoints (Public Networking with restrictions)**:
 
+![Public Networking Architecture Diagram](docs/public-networking-diagram.png)
+
+- Typical scenarios: Local development, dev/sandbox environments, or applications where private networking of backend services is not required.
 - Best for development scenarios or when public access is required
 - Allows controlled public access from specified IP addresses
 - Simpler to set up and use when deveoping locally
 - No cost overhead
-- Typical scenarios: Local development, dev/sandbox environments, or applications where private networking of backend services is not required.
 
 **Private Endpoints**:
 
+![Private Networking Architecture Diagram](docs/private-networking-diagram.png)
+
+- Typical scenarios: Production environments, and applications where private networking is required.
 - Best for enterprise security requirements, providing the highest level of security
 - Recommended for production environments with strict security requirements
 - Can completely isolates services from the public internet - all traffic that originates from within the VNET will stay within the VNET
 - Adds a small cost overhead (approximately $7.50 per month per private endpoint, which can total $60-75/month when using private endpoints for all services)
-- Typical scenarios: Production environments, and applications where private networking is required.
+- **Note: This option requires modifications in order to fully deploy the solution (see the [Private endpoint considerations section](#private-endpoint-considerations)) and to integrate the solution with other source or destination systems. This would require either peering this accelerator's VNET to another VNET, deploying additional services into the accelerator's VNET, or using a hybrid networking approach (detailed below).**
+
+**Hybrid Networking**:
+
+- With a hybrid option, it is possible to use public networking and ingress for the web and/or function apps, while ensuring all requests from those apps to the backend & storage services are via private endpoints. To do this, you would configure public networking for the web & function apps (while restricting access to given IP addresses or ranges) while deploying the backend and storage services with private endpoints. This keeps all internal traffic within the VNET while allowing public access to the web and function apps.
 
 #### Private endpoint considerations
 
@@ -301,14 +321,17 @@ When using private endpoints:
   - Once installed, make sure to run all commands below from the Windows Powershell command line (otherwise the `az` and `azd` commands may not work correctly).
 - To use and deploy this solution accelerator, you will need access to an Azure subscription with permission to create resource groups and resources. You can [create an Azure account here for free](https://azure.microsoft.com/free/).
 - Clone this repository: `git clone https://github.com/azure/multimodal-ai-llm-processing-accelerator.git`
+- Change into the repository directory: `cd multimodal-ai-llm-processing-accelerator`
 - Create a new Python 3.11 environment for your project.
-  - To do this, open a terminal window and navigate to the root directory of the repository. You can then use a package manager like `conda`, `venv` or `virtualenv` to create the environment - below are some example commands:
-    - Anaconda: `conda create -n mm_ai_llm_processing_accelerator python=3.11 --no-default-packages`, then activate the environment with `conda activate mm_ai_llm_processing_accelerator` each time you want run or deploy the solution.
-    - venv: `python -m venv .venv`, then activate the environment with `source .venv/bin/activate` each time you want run or deploy the solution.
+  - A new python environment is essential, and ensures the correct python version and dependencies are installed for the accelerator. This python environment is required for both deployment and local development.
+  - To do this, open a terminal window and navigate to the root directory of the repository. You can then use a package manager like `conda`, `venv` or `virtualenv` to create the environment - below are some example commands (you should read the documentation for these libraries if they are not already installed on your system):
+    - Anaconda: `conda create -n mm_ai_llm_processing_accelerator python=3.11 --no-default-packages` to create the environment, then activate the environment with `conda activate mm_ai_llm_processing_accelerator` each time you want run or deploy the solution.
+    - venv: `python -m venv .venv` to create the environment, then activate the environment with `source .venv/bin/activate` (linux/MacOS) or `.venv\Scripts\Activate.ps1` (Windows Powershell) each time you want run or deploy the solution. More info [here](https://python.land/virtual-environments/virtualenv#Python_venv_activation).
   - Once the new environment is created and activated, install the python requirements file: `pip install -r requirements.txt`. This contains the dependencies for both the function and web apps.
   - Make sure you have activated the environment each time you need to deploy the solution or run it locally.
 - Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (`az`) and login using `az login`.
 - Install the [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/install-azd) (`azd`) and login using `azd auth login`.
+  - Note: Make sure both the Azure CLI and Developer CLI are logged into the same tenant.
 
 ### Deploying to Azure with `azd`
 
@@ -318,8 +341,9 @@ Execute the following command, if you don't have any pre-existing Azure services
 
 1. Ensure your virtual environment is activated
 1. Run `azd auth login`
-1. Review the default parameters in `infra/main.bicepparam` and update as required. At a minimum, make sure to update the `additionalRoleAssignmentIdentityIds` parameter with your identity ID and review the networking configuration (see the file for instructions).
-1. Run `azd up` to start the deployment. Follow the prompts to create or select the resource group, location and other parameters. This will provision the Azure resources and deploy the services.
+1. Review the default parameters in `infra/main.bicepparam` and update as required. At a minimum, make sure to update the `additionalRoleAssignmentIdentityIds` parameter with your identity ID, review the AI resource deployment locations, and review the networking configuration (see the file for instructions).
+    - Note that most resources are deployed to the region that the resource group is created in, but certain AI service resources can be deployed to a different independent location. This enables you to deploy those resources in a different region to the app & databases (so that you have access to a different set of features or models).
+1. Run `azd up` to start the deployment. Follow the prompts to create or select the resource group, base location and other parameters. This will then provision the Azure resources and deploy the services.
 
 > [!WARNING]
 > When deploying for the first time, you may receive a `ServiceUnavailable` error when attempting to deploy the apps after provisioning. This is due to a known bug when retrieving the function key for a newly deployed Azure Function. If this error occurs, simply wait 1-2 minutes and then rerun `azd deploy`. The deployment should then complete successfully.
@@ -358,38 +382,29 @@ To clean up all the resources created by this sample:
 
 #### Prerequisites
 
-- Make sure to complete the prerequisites in the [Prerequisites for deployment and local development](#prerequisites-for-deployment-and-local-development) section.
-- For local development, install [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Cmacos%2Ccsharp%2Cportal%2Cbash#install-the-azure-functions-core-tools) so that you can run the function app server locally.
+Make sure to complete the prerequisites in the [Prerequisites for deployment and local development](#prerequisites-for-deployment-and-local-development) section. Additionally, you will need to:
+
+- Install [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Cmacos%2Ccsharp%2Cportal%2Cbash#install-the-azure-functions-core-tools) so that you can run the function app server locally.
 - Deploy the backend Azure resources
-  - To run the solution locally, you will need to create the necessary resources for all Storage, CosmosDB and Azure AI service calls (e.g. Azure Document Intelligence, Azure OpenAI etc). To do this, it is recommended to first deploy the solution to Azure using `azd up` and with Service Endpoints enabled for the backend services, along with public network access from your local computer. This will provision the necessary backend resources that can now be called by the locally running function app.
+  - To run the solution locally, you will still need to create the necessary resources for all CosmosDB and Azure AI service calls (e.g. Azure Document Intelligence, Azure OpenAI etc). To do this, it is recommended to first deploy the solution to Azure using `azd up` and with public network access enabled for connection between your local computer and the storage and backend services. This will provision the necessary backend resources that can now be called by the locally running function app.
   - If using the Azure Content Understanding service in your pipelines, ensure that any changes to the analyzer schemas are updated within the Azure resource before you test your pipelines locally. Whenever you update any of the [Content Understanding schema definitions](/function_app/config/content_understanding_schemas.json), you can push the new definitions to the Azure resource using the [create_content_understanding_analyzers.py](function_app/create_content_understanding_analyzers.py) script or by simply running `azd provision` again (the schemas are automatically updated within the Azure resource using a [postprovision script](/azure.yaml) whenever the infrastructure is re-deployed to Azure).
+  - Install and run the Azurerite Azure Storage Emulator (see below).
 
 ##### Azurite Azure Storage Emulator
 
-When running the apps locally, you can opt to use an emulator for Azure Storage instead of connecting to a storage account that is deployed in Azure.
+If your app contains any pipelines that require Azure Storage bindings (e.g. to use an Azure Storage bucket as to trigger a pipeline), you will need to run the Azurite Azure Storage emulator each time you run the function app server (an [example](/function_app/function_app.py#L19.py) is included in this accelerator). While the locally running function server can connect to CosmosDB using identity-based connections, connecting to Azure Storage does not work unless you use connection strings (which is less secure) or a managed identity (which is done automatically when deployed to Azure). This means that running the emulator is essential in order to build and test pipelines that require Azure Storage bindings.
 
-If using the Azure Storage bindings in your pipelines (e.g. for Azure Blob Storage input triggers), you can either connect directly to an Azure Storage account or you can test with a locally-running Storage Account emulator. The steps below outline the correct configuration for each of these options.
-
-1. To use a locally-running Storage Account emulator, you will need to install and run the Azurite emulator before you start the function server.
+If you wish to use Azure Storage bindings in your app, follow the steps below to run the storage emulator.
 
 - The easiest way to run the Azurite emulator is using the [Azurite VS Code extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
-- Once installed, click on the buttons in the bottom right-hand corner of the VS Code window to start or stop the server (see below). Once clicked, the emulator will start running:
+- Once installed, click on the buttons in the bottom right-hand corner of the VS Code window to start or stop the server:
   ![Azurite VS Code Extension](/docs/vscode-azurite-buttons.png)
-- Finally, you'll need to update the parameters for the function and web apps so that they upload and read from the emulated storage account.
-  - Function App: Make sure the `AzureWebJobsStorage` parameter is set to `UseDevelopmentStorage=true` in the `function_app/local.settings.json` file.
-  - Web App: Set the `USE_LOCAL_STORAGE_EMULATOR` parameter to `"true"` in the `demo_app/.env` file. When set to true, this will instruct the demo app to connect using the pre-set `LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING` parameter (more info [here](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio%2Cblob-storage#https-connection-strings)).
+- Once you click these buttons, the server will start running and the IP address of each service will be displayed in the button.
 
-2. To connect to a Azure Storage account that is deployed in Azure, you can use the following environment variables for each of the apps:
+From here, both the function and web apps should automatically connect to the locally running server as long as the following parameters are set in the configuration files of each app. These are the default settings in the sample files for both the demo and web apps, so you won't need to make any changes if you clone and update the sample files (more info in the following sections). Just make sure that the Azurite emulator is always running prior to when you start the function server, otherwise the pipelines that rely on Azure Storage bindings will not load or will be ignored.
 
-- Function app - Ensure that `AzureWebJobsStorage` is **not** set within `function_app/local.settings.json`, and then set the following parameters based on the outputs in the azd .env file:
-  - `AzureWebJobsStorage__accountName` (azd output field: `storageAccountName`)
-  - `AzureWebJobsStorage__blobServiceUri` (azd output field: `storageAccountBlobUri`)
-  - `AzureWebJobsStorage__queueServiceUri` (azd output field: `storageAccountQueueUri`)
-  - `AzureWebJobsStorage__tableServiceUri` (azd output field: `storageAccountTableUri`)
-- Web app - In your .env file, use the following parameters:
-  - Set the `USE_LOCAL_STORAGE_EMULATOR` parameter to `"false"`
-  - Set the `STORAGE_ACCOUNT_ENDPOINT` parameter to the storage account endpoint (e.g. `"https://llmprocstorageXXXXX.blob.core.windows.net/"` )
-- If you've already deployed the solution, the parameters required for all of the instructions above will be stored in your azd environment output variables. These can be copied by running `azd env get-values` and then updating `function_app/local.settings.json` and `demo_app/.env` files with the corresponding values.
+- Function App: The `AzureWebJobsStorage` parameter must be set to `UseDevelopmentStorage=true` in the `function_app/local.settings.json` file.
+- Web App: The `USE_LOCAL_STORAGE_EMULATOR` parameter in `demo_app/.env` must be set to `"true"`. When set to true, this will instruct the demo app to connect using the pre-set `LOCAL_STORAGE_ACCOUNT_CONNECTION_STRING` parameter (more info [here](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio%2Cblob-storage#https-connection-strings)).
 
 #### Function app local instructions
 
@@ -397,7 +412,7 @@ The `function_app` folder contains the backend Azure Functions App. By default, 
 
 - Open a new terminal/Windows Powershell window and activate your project's Python 3.11 environment (see [Prerequisites for deployment and local development](#prerequisites-for-deployment-and-local-development))
 - Navigate to the function app directory: `cd function_app`
-- When starting the function server, a number of environment variables are loaded from a configuration file in the `function_app` folder, called `local.settings.json`. To get started quickly, you can clone the sample file (`cp function_app/sample_local.settings.json function_app/local.settings.json`). More info on local Azure Functions development can be found [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local).
+- When starting the function server, a number of environment variables are loaded from a configuration file in the `function_app` folder, called `local.settings.json`. To get started quickly, you can clone the sample file and then modify the placeholder values (using the command: `cp function_app/sample_local.settings.json function_app/local.settings.json`). More info on local Azure Functions development can be found [here](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-local).
 - Now review the newly created `local.settings.json` file. The file includes many placeholder values that should be updated to the correct values based on your azd deployment (these are usually capitalized, e.g. `DOC_INTEL_ENDPOINT` or `AOAI_ENDPOINT`).
   - The `sample_local.settings.json` file is configured by default to connect to a local Azurite storage account emulator for Azure Blob Storage bindings. Review the [Azurite Azure Storage Emulator](#azurite-azure-storage-emulator) section for more info on how to configure or change the environment variables correctly.
 - Start the function server: `func start`
